@@ -35,7 +35,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      taskUrls={{ 'reset-password': '/forgot-password' }}
+    >
       <html lang="en">
         <body
           className={AppFont.className}
