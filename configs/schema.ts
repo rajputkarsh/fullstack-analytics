@@ -57,7 +57,9 @@ export const analyticsEventsTable = pgTable(
         deviceType: varchar("device_type", { length: 50 }),
         osName: varchar("os_name", { length: 100 }),
         browserName: varchar("browser_name", { length: 100 }),
-        eventTimestamp: timestamp("event_timestamp", { withTimezone: true }),
+        country: varchar("country", { length: 2 }),
+        eventTimestamp: timestamp("event_timestamp", { withTimezone: true })
+            .defaultNow(),
         createdAt: timestamp("created_at", { withTimezone: true })
             .defaultNow()
             .notNull(),
@@ -67,5 +69,29 @@ export const analyticsEventsTable = pgTable(
             table.trackingId,
         ),
         userIdIndex: index("analytics_events_user_id_idx").on(table.userId),
+        trackingTimeIndex: index("analytics_events_tracking_time_idx").on(
+            table.trackingId,
+            table.eventTimestamp,
+        ),
+        trackingCreatedIndex: index("analytics_events_tracking_created_idx").on(
+            table.trackingId,
+            table.createdAt,
+        ),
+        trackingSessionIndex: index("analytics_events_tracking_session_idx").on(
+            table.trackingId,
+            table.sessionId,
+        ),
+        trackingDeviceIndex: index("analytics_events_tracking_device_idx").on(
+            table.trackingId,
+            table.deviceType,
+        ),
+        trackingBrowserIndex: index("analytics_events_tracking_browser_idx").on(
+            table.trackingId,
+            table.browserName,
+        ),
+        trackingCountryIndex: index("analytics_events_tracking_country_idx").on(
+            table.trackingId,
+            table.country,
+        ),
     }),
 );

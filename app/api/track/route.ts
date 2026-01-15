@@ -91,6 +91,13 @@ function toSafeTimestamp(value: unknown) {
   return date;
 }
 
+function toSafeCountry(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
@@ -164,8 +171,9 @@ export async function POST(request: NextRequest) {
     const deviceType = payload?.device?.device_type;
     const osName = toSafeString(payload?.device?.os_name, 100);
     const browserName = toSafeString(payload?.device?.browser_name, 100);
-    const eventTimestamp = toSafeTimestamp(payload?.timestamp);
+    const eventTimestamp = toSafeTimestamp(payload?.timestamp) ?? new Date();
     const sessionId = toSafeString(body?.session_id, 64);
+    const country = toSafeCountry(request.geo?.country);
 
     if (!pageUrl && !pathname) {
       return NextResponse.json(
@@ -187,6 +195,7 @@ export async function POST(request: NextRequest) {
       deviceType,
       osName,
       browserName,
+      country,
       eventTimestamp,
     });
 
