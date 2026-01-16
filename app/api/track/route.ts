@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
-import { db } from "@/configs/db";
-import { analyticsEventsTable, websitesTable } from "@/configs/schema";
-import { eq } from "drizzle-orm";
+import {
+  getWebsiteByTrackingId,
+  insertEvents,
+  upsertSession,
+  type EventInsert,
+  type SessionUpsert,
+} from "@/lib/analytics/repository";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,14 +14,15 @@ const corsHeaders = {
 };
 
 const MAX_BODY_BYTES = 8 * 1024;
+const MAX_EVENTS_PER_REQUEST = 25;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 60;
-const ipBucket = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 120;
+const trackingBuckets = new Map<string, { count: number; resetAt: number }>();
 
 type TrackEventPayload = {
   tracking_id: string;
   session_id?: string;
-  event_type: "page_view";
+  event_type: string;
   event_payload: {
     page: {
       url?: string;
@@ -36,27 +40,14 @@ type TrackEventPayload = {
   };
 };
 
-function getClientIp(request: NextRequest) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim();
-  }
-  return request.ip ?? undefined;
-}
-
-function getRateLimitKey(ip: string | undefined) {
-  if (!ip) {
-    return "anonymous";
-  }
-  const salt = process.env.TRACKING_IP_HASH_SALT ?? "tracking-salt";
-  return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
-}
-
-function rateLimit(key: string) {
+function rateLimit(trackingId: string) {
   const now = Date.now();
-  const bucket = ipBucket.get(key);
+  const bucket = trackingBuckets.get(trackingId);
   if (!bucket || bucket.resetAt <= now) {
-    ipBucket.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    trackingBuckets.set(trackingId, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
     return true;
   }
   if (bucket.count >= RATE_LIMIT_MAX) {
@@ -67,11 +58,11 @@ function rateLimit(key: string) {
 }
 
 function pruneRateLimitBuckets() {
-  if (ipBucket.size < 1000) return;
+  if (trackingBuckets.size < 1000) return;
   const now = Date.now();
-  for (const [key, bucket] of ipBucket.entries()) {
+  for (const [key, bucket] of trackingBuckets.entries()) {
     if (bucket.resetAt <= now) {
-      ipBucket.delete(key);
+      trackingBuckets.delete(key);
     }
   }
 }
@@ -84,18 +75,23 @@ function toSafeString(value: unknown, maxLength: number) {
   return trimmed;
 }
 
-function toSafeTimestamp(value: unknown) {
-  if (typeof value !== "string") return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date;
-}
-
 function toSafeCountry(value: unknown) {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(trimmed)) return undefined;
   return trimmed;
+}
+
+function normalizeDeviceType(value: unknown) {
+  if (value === "mobile" || value === "tablet" || value === "desktop") {
+    return value;
+  }
+  return undefined;
+}
+
+function toEventPayload(value: unknown): TrackEventPayload | null {
+  if (!value || typeof value !== "object") return null;
+  return value as TrackEventPayload;
 }
 
 export async function OPTIONS() {
@@ -112,28 +108,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    pruneRateLimitBuckets();
-    const rateKey = getRateLimitKey(getClientIp(request));
-    if (!rateLimit(rateKey)) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded." },
-        { status: 429, headers: corsHeaders },
-      );
-    }
-
-    let body: TrackEventPayload;
+    let rawBody: unknown;
     try {
-      body = (await request.json()) as TrackEventPayload;
+      rawBody = await request.json();
     } catch {
       return NextResponse.json(
         { error: "Malformed JSON payload." },
         { status: 400, headers: corsHeaders },
       );
     }
-    const trackingId = toSafeString(body?.tracking_id, 64);
-    const eventType = body?.event_type;
-    const payload = body?.event_payload;
+    const payloads = Array.isArray(rawBody) ? rawBody : [rawBody];
+    if (payloads.length === 0 || payloads.length > MAX_EVENTS_PER_REQUEST) {
+      return NextResponse.json(
+        { error: "Invalid batch size." },
+        { status: 400, headers: corsHeaders },
+      );
+    }
 
+    const normalizedPayloads = payloads
+      .map(toEventPayload)
+      .filter((value): value is TrackEventPayload => Boolean(value));
+
+    if (normalizedPayloads.length !== payloads.length) {
+      return NextResponse.json(
+        { error: "Invalid event payload." },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    const trackingId = toSafeString(normalizedPayloads[0]?.tracking_id, 64);
     if (!trackingId) {
       return NextResponse.json(
         { error: "Tracking ID is required." },
@@ -141,63 +144,96 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (eventType !== "page_view" || !payload) {
+    if (!normalizedPayloads.every((event) => event.tracking_id === trackingId)) {
       return NextResponse.json(
-        { error: "Invalid event payload." },
+        { error: "Mixed tracking IDs are not allowed." },
         { status: 400, headers: corsHeaders },
       );
     }
 
-    const website = await db
-      .select({ userId: websitesTable.userId })
-      .from(websitesTable)
-      .where(eq(websitesTable.trackingId, trackingId))
-      .limit(1);
+    pruneRateLimitBuckets();
+    if (!rateLimit(trackingId)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded." },
+        { status: 429, headers: corsHeaders },
+      );
+    }
 
-    if (website.length === 0) {
+    const website = await getWebsiteByTrackingId(trackingId);
+    if (!website) {
       return NextResponse.json(
         { error: "Tracking ID not found." },
         { status: 404, headers: corsHeaders },
       );
     }
 
-    const pageUrl = toSafeString(payload?.page?.url, 1000);
-    const pathname = toSafeString(payload?.page?.pathname, 500);
-    const pageTitle = toSafeString(payload?.page?.title, 500);
-    const referrer = toSafeString(payload?.referrer, 500);
-    const userAgent =
-      toSafeString(payload?.device?.user_agent, 500) ??
-      toSafeString(request.headers.get("user-agent"), 500);
-    const deviceType = payload?.device?.device_type;
-    const osName = toSafeString(payload?.device?.os_name, 100);
-    const browserName = toSafeString(payload?.device?.browser_name, 100);
-    const eventTimestamp = toSafeTimestamp(payload?.timestamp) ?? new Date();
-    const sessionId = toSafeString(body?.session_id, 64);
     const country = toSafeCountry(request.geo?.country);
+    const events: EventInsert[] = [];
+    const sessions = new Map<string, SessionUpsert>();
 
-    if (!pageUrl && !pathname) {
-      return NextResponse.json(
-        { error: "Page data is required." },
-        { status: 400, headers: corsHeaders },
-      );
+    for (const event of normalizedPayloads) {
+      const eventType = toSafeString(event.event_type, 50);
+      const payload = event.event_payload;
+      const sessionId = toSafeString(event.session_id, 64);
+
+      if (!eventType || !payload || !sessionId) {
+        return NextResponse.json(
+          { error: "Invalid event payload." },
+          { status: 400, headers: corsHeaders },
+        );
+      }
+
+      const pageUrl = toSafeString(payload?.page?.url, 1000);
+      const pagePath = toSafeString(payload?.page?.pathname, 1000);
+      const pageTitle = toSafeString(payload?.page?.title, 500);
+      const referrer = toSafeString(payload?.referrer, 500);
+      const deviceType = normalizeDeviceType(payload?.device?.device_type) ?? "unknown";
+      const browser = toSafeString(payload?.device?.browser_name, 100) ?? "Unknown";
+      const os = toSafeString(payload?.device?.os_name, 100) ?? "Unknown";
+      const observedAt = new Date();
+
+      if (!pageUrl && !pagePath) {
+        return NextResponse.json(
+          { error: "Page data is required." },
+          { status: 400, headers: corsHeaders },
+        );
+      }
+
+      events.push({
+        websiteId: website.id,
+        trackingId,
+        sessionId,
+        eventType,
+        pageUrl,
+        pagePath,
+        pageTitle,
+        referrer,
+        deviceType,
+        browser,
+        os,
+        country,
+        createdAt: observedAt,
+      });
+
+      if (!sessions.has(sessionId)) {
+        sessions.set(sessionId, {
+          id: sessionId,
+          websiteId: website.id,
+          firstSeenAt: observedAt,
+          lastSeenAt: observedAt,
+          deviceType,
+          browser,
+          os,
+          country,
+        });
+      } else {
+        const existing = sessions.get(sessionId)!;
+        existing.lastSeenAt = observedAt;
+      }
     }
 
-    await db.insert(analyticsEventsTable).values({
-      userId: website[0].userId,
-      trackingId,
-      sessionId,
-      eventType: "page_view",
-      pageUrl,
-      pathname,
-      pageTitle,
-      referrer,
-      userAgent,
-      deviceType,
-      osName,
-      browserName,
-      country,
-      eventTimestamp,
-    });
+    await Promise.all([...sessions.values()].map((session) => upsertSession(session)));
+    await insertEvents(events);
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch {

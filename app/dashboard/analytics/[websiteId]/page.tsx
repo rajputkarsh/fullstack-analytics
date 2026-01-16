@@ -151,9 +151,9 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
   const granularity = normalizeGranularity(searchParams?.granularity);
 
   const [overview, timeSeries, filterOptions] = await Promise.all([
-    getOverviewMetrics(website[0].trackingId, filters, ACTIVE_MINUTES),
-    getTimeSeries(website[0].trackingId, filters, granularity),
-    getFilterOptions(website[0].trackingId, filters),
+    getOverviewMetrics(website[0].id, filters, ACTIVE_MINUTES),
+    getTimeSeries(website[0].id, filters, granularity),
+    getFilterOptions(website[0].id, filters),
   ]);
 
   return (

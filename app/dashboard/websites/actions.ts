@@ -2,7 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/configs/db";
-import { analyticsEventsTable, websitesTable } from "@/configs/schema";
+import { eventsTable, sessionsTable, websitesTable } from "@/configs/schema";
 import crypto from "crypto";
 
 type ActionResult = {
@@ -190,7 +190,7 @@ export async function deleteWebsite(formData: FormData): Promise<ActionResult> {
     }
 
     const website = await db
-      .select({ trackingId: websitesTable.trackingId })
+      .select({ id: websitesTable.id })
       .from(websitesTable)
       .where(and(eq(websitesTable.id, id), eq(websitesTable.userId, userId)))
       .limit(1);
@@ -199,14 +199,8 @@ export async function deleteWebsite(formData: FormData): Promise<ActionResult> {
       return { success: false, error: "Website not found." };
     }
 
-    await db
-      .delete(analyticsEventsTable)
-      .where(
-        and(
-          eq(analyticsEventsTable.userId, userId),
-          eq(analyticsEventsTable.trackingId, website[0].trackingId),
-        ),
-      );
+    await db.delete(eventsTable).where(eq(eventsTable.websiteId, website[0].id));
+    await db.delete(sessionsTable).where(eq(sessionsTable.websiteId, website[0].id));
 
     await db
       .delete(websitesTable)

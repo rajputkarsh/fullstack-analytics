@@ -2,6 +2,7 @@ import {
     index,
     integer,
     pgTable,
+    text,
     timestamp,
     uniqueIndex,
     uuid,
@@ -38,6 +39,62 @@ export const websitesTable = pgTable(
             table.userId,
             table.domain,
         ),
+    }),
+);
+
+// Analytics ingestion tables optimized for high-write workloads.
+export const eventsTable = pgTable(
+    "events",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        websiteId: uuid("website_id").notNull(),
+        trackingId: varchar("tracking_id", { length: 64 }).notNull(),
+        sessionId: varchar("session_id", { length: 64 }).notNull(),
+        eventType: varchar("event_type", { length: 50 }).notNull(),
+        pageUrl: text("page_url"),
+        pagePath: text("page_path"),
+        pageTitle: text("page_title"),
+        referrer: text("referrer"),
+        deviceType: varchar("device_type", { length: 50 }).notNull(),
+        browser: varchar("browser", { length: 100 }).notNull(),
+        os: varchar("os", { length: 100 }).notNull(),
+        country: varchar("country", { length: 2 }),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => ({
+        // Composite index accelerates time-bound dashboards per website.
+        websiteCreatedIndex: index("events_website_created_idx").on(
+            table.websiteId,
+            table.createdAt,
+        ),
+        // Composite index optimizes session-scoped aggregations.
+        websiteSessionIndex: index("events_website_session_idx").on(
+            table.websiteId,
+            table.sessionId,
+        ),
+        trackingIdIndex: index("events_tracking_id_idx").on(table.trackingId),
+        sessionIdIndex: index("events_session_id_idx").on(table.sessionId),
+        eventTypeIndex: index("events_event_type_idx").on(table.eventType),
+    }),
+);
+
+export const sessionsTable = pgTable(
+    "sessions",
+    {
+        id: varchar("id", { length: 64 }).primaryKey(),
+        websiteId: uuid("website_id").notNull(),
+        firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull(),
+        lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull(),
+        deviceType: varchar("device_type", { length: 50 }).notNull(),
+        browser: varchar("browser", { length: 100 }).notNull(),
+        os: varchar("os", { length: 100 }).notNull(),
+        country: varchar("country", { length: 2 }),
+    },
+    (table) => ({
+        websiteIndex: index("sessions_website_id_idx").on(table.websiteId),
+        lastSeenIndex: index("sessions_last_seen_idx").on(table.lastSeenAt),
     }),
 );
 
