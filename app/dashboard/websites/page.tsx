@@ -1,14 +1,14 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/configs/db";
 import { websitesTable } from "@/configs/schema";
 import WebsiteManager from "./website-manager";
 import { createWebsite, deleteWebsite, updateWebsite } from "./actions";
+import { headers } from "next/headers";
 
-function getBaseUrl() {
-  const requestHeaders = headers();
+async function getBaseUrl() {
+  const requestHeaders = await headers();
   const host =
     requestHeaders.get("x-forwarded-host") ||
     requestHeaders.get("host") ||
@@ -18,7 +18,7 @@ function getBaseUrl() {
 }
 
 export default async function WebsitesPage() {
-  const user = await currentUser();
+  const user = await currentUser(); 
   if (!user) {
     redirect("/sign-in");
   }
@@ -31,7 +31,7 @@ export default async function WebsitesPage() {
 
   return (
     <WebsiteManager
-      baseUrl={getBaseUrl()}
+      baseUrl={await getBaseUrl()}
       actions={{ createWebsite, updateWebsite, deleteWebsite }}
       websites={websites.map((website) => ({
         ...website,
