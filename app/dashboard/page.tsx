@@ -1,6 +1,8 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function DashboardPage() {
   const user = await currentUser();
@@ -30,6 +32,15 @@ export default async function DashboardPage() {
           <p className="text-gray-600 dark:text-neutral-400">
             This is your protected dashboard. Only authenticated users can access this page.
           </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Button asChild>
+              <Link href="/dashboard/websites">Create new website</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/websites">Manage websites</Link>
+            </Button>
+          </div>
           
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">

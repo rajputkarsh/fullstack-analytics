@@ -5,6 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/configs/db";
 import { websitesTable } from "@/configs/schema";
 import WebsiteManager from "./website-manager";
+import { createWebsite, deleteWebsite, updateWebsite } from "./actions";
 
 function getBaseUrl() {
   const requestHeaders = headers();
@@ -31,6 +32,7 @@ export default async function WebsitesPage() {
   return (
     <WebsiteManager
       baseUrl={getBaseUrl()}
+      actions={{ createWebsite, updateWebsite, deleteWebsite }}
       websites={websites.map((website) => ({
         ...website,
         createdAt: website.createdAt.toISOString(),

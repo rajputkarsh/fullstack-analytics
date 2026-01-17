@@ -1,3 +1,5 @@
+"use server";
+
 import { currentUser } from "@clerk/nextjs/server";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -5,7 +7,7 @@ import { db } from "@/configs/db";
 import { eventsTable, sessionsTable, websitesTable } from "@/configs/schema";
 import crypto from "crypto";
 
-type ActionResult = {
+export type ActionResult = {
   success: boolean;
   error?: string;
 };
@@ -64,7 +66,6 @@ function formatDbError(error: unknown): string {
 }
 
 export async function createWebsite(formData: FormData): Promise<ActionResult> {
-  "use server";
 
   try {
     const userId = await requireUserId();
@@ -122,7 +123,6 @@ export async function createWebsite(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateWebsite(formData: FormData): Promise<ActionResult> {
-  "use server";
 
   try {
     const userId = await requireUserId();
@@ -179,7 +179,6 @@ export async function updateWebsite(formData: FormData): Promise<ActionResult> {
 }
 
 export async function deleteWebsite(formData: FormData): Promise<ActionResult> {
-  "use server";
 
   try {
     const userId = await requireUserId();

@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { createWebsite, deleteWebsite, updateWebsite } from "./actions";
+import type { ActionResult } from "./actions";
 
 type Website = {
   id: string;
@@ -40,9 +40,18 @@ type Website = {
 type WebsiteManagerProps = {
   websites: Website[];
   baseUrl: string;
+  actions: {
+    createWebsite: (formData: FormData) => Promise<ActionResult>;
+    updateWebsite: (formData: FormData) => Promise<ActionResult>;
+    deleteWebsite: (formData: FormData) => Promise<ActionResult>;
+  };
 };
 
-export default function WebsiteManager({ websites, baseUrl }: WebsiteManagerProps) {
+export default function WebsiteManager({
+  websites,
+  baseUrl,
+  actions,
+}: WebsiteManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +88,7 @@ export default function WebsiteManager({ websites, baseUrl }: WebsiteManagerProp
   const handleCreate = async (formData: FormData) => {
     setError(null);
     startTransition(async () => {
-      const result = await createWebsite(formData);
+      const result = await actions.createWebsite(formData);
       if (!result.success) {
         setError(result.error || "Unable to create website.");
         return;
@@ -93,7 +102,7 @@ export default function WebsiteManager({ websites, baseUrl }: WebsiteManagerProp
   const handleUpdate = async (formData: FormData) => {
     setError(null);
     startTransition(async () => {
-      const result = await updateWebsite(formData);
+      const result = await actions.updateWebsite(formData);
       if (!result.success) {
         setError(result.error || "Unable to update website.");
         return;
@@ -107,7 +116,7 @@ export default function WebsiteManager({ websites, baseUrl }: WebsiteManagerProp
   const handleDelete = async (formData: FormData) => {
     setError(null);
     startTransition(async () => {
-      const result = await deleteWebsite(formData);
+      const result = await actions.deleteWebsite(formData);
       if (!result.success) {
         setError(result.error || "Unable to delete website.");
         return;

@@ -11,11 +11,25 @@ const isPublicRoute = createRouteMatcher([
     '/api/user(.*)'
 ])
 
+const isAuthRoute = createRouteMatcher([
+    '/sign-in(.*)',
+    '/sign-up(.*)'
+])
+
 const isAdminRoute = createRouteMatcher([
     '/admin(.*)'
 ])
 
 export default clerkMiddleware(async (auth, req) => {
+    if (isAuthRoute(req)) {
+        const { userId } = await auth()
+        if (userId) {
+            const postAuthUrl = new URL('/post-auth', req.url)
+            return NextResponse.redirect(postAuthUrl)
+        }
+        return NextResponse.next()
+    }
+
     // Allow public routes
     if (isPublicRoute(req)) {
         return NextResponse.next()
