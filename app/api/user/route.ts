@@ -8,14 +8,16 @@ export async function POST(req: NextRequest) {
     try {
         const user = await currentUser();
 
-        if (!user || !user.primaryEmailAddress?.emailAddress) {
+        const email =
+            user?.primaryEmailAddress?.emailAddress ??
+            user?.emailAddresses?.[0]?.emailAddress;
+
+        if (!user || !email) {
             return NextResponse.json(
                 { error: "Unauthorized or missing email address" },
                 { status: 401 }
             );
         }
-
-        const email = user.primaryEmailAddress.emailAddress;
 
         // Check if user already exists
         const existingUsers = await db

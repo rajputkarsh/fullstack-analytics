@@ -2,7 +2,7 @@
 
 import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 
 
 function Provider({
@@ -11,13 +11,21 @@ function Provider({
     children: React.ReactNode;
 }>) {
 
-    const { user } = useUser();
+    const { user, isLoaded, isSignedIn } = useUser();
+    const didCreate = useRef(false);
+
     useEffect(() => {
-        user && createNewUser();
-    }, [user]);
+        if (!isLoaded || !isSignedIn || !user || didCreate.current) return;
+        didCreate.current = true;
+        createNewUser();
+    }, [isLoaded, isSignedIn, user]);
 
     const createNewUser = async () => {
-        const result = await axios.post('/api/user');
+        try {
+            await axios.post('/api/user');
+        } catch {
+            // Silently ignore to avoid blocking UI if auth is still warming up.
+        }
     }
 
     return (
