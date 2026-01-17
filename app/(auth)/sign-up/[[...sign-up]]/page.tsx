@@ -7,7 +7,7 @@ export default function Page() {
                 routing="path"
                 path="/sign-up"
                 signInUrl="/sign-in"
-                afterSignUpUrl="/dashboard"
+                afterSignUpUrl="/post-auth"
             />
         </div>
     )
