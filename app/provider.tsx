@@ -22,7 +22,17 @@ function Provider({
 
     const createNewUser = async () => {
         try {
-            await axios.post('/api/user');
+            const token = await user?.getToken();
+            await axios.post(
+                '/api/user',
+                undefined,
+                token
+                    ? {
+                          headers: { Authorization: `Bearer ${token}` },
+                          withCredentials: true,
+                      }
+                    : { withCredentials: true },
+            );
         } catch {
             // Silently ignore to avoid blocking UI if auth is still warming up.
         }

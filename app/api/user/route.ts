@@ -2,17 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/configs/db";
 import { usersTable } from "@/configs/schema";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 
 export async function POST(req: NextRequest) {
     try {
-        const user = await currentUser();
+        const { userId } = await auth();
+        if (!userId) {
+            return NextResponse.json(
+                { error: "Unauthorized or missing email address" },
+                { status: 401 }
+            );
+        }
 
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
         const email =
-            user?.primaryEmailAddress?.emailAddress ??
-            user?.emailAddresses?.[0]?.emailAddress;
+            user.primaryEmailAddress?.emailAddress ??
+            user.emailAddresses?.[0]?.emailAddress;
 
-        if (!user || !email) {
+        if (!email) {
             return NextResponse.json(
                 { error: "Unauthorized or missing email address" },
                 { status: 401 }
