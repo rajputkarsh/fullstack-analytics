@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tracking Test Page</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 2rem;
+        line-height: 1.5;
+      }
+      code {
+        background: #f3f4f6;
+        padding: 0.1rem 0.3rem;
+        border-radius: 4px;
+      }
+      .hint {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      button {
+        padding: 0.5rem 0.9rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #111827;
+        color: #fff;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tracking Test Page</h1>
+    <p class="hint">
+      Open this file in a browser while your Next.js dev server is running.
+      Replace the tracking ID in the script tag with one from your dashboard.
+    </p>
+
+    <p>
+      Tracker endpoint: <code>http://localhost:3000/api/track</code>
+    </p>
+
+    <button id="simulate">Simulate page view</button>
+
+    <script
+        src="http://localhost:3000/tracker.js"
+        data-tracking-id="22d2c344534b0952dff0247c0de0950e"
+        data-endpoint="http://localhost:3000/api/track"
+        async
+    ></script>
+
+    <script>
+      document.getElementById("simulate").addEventListener("click", function () {
+        location.hash = "view-" + Date.now();
+        location.reload();
+      });
+    </script>
+  </body>
+</html>
+
