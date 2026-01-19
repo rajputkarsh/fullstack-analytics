@@ -13,7 +13,9 @@ import {
 } from "./queries";
 
 type PageProps = {
-  params: { websiteId: string };
+  params:
+    | { websiteId: string }
+    | Promise<{ websiteId: string }>;
   searchParams?: Record<string, string | string[] | undefined>;
 };
 
@@ -124,7 +126,8 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
     redirect("/sign-in");
   }
 
-  const websiteId = params.websiteId;
+  const resolvedParams = await params;
+  const websiteId = resolvedParams.websiteId;
   const website = await db
     .select({
       id: websitesTable.id,
@@ -135,6 +138,8 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
     .from(websitesTable)
     .where(and(eq(websitesTable.id, websiteId), eq(websitesTable.userId, user.id)))
     .limit(1);
+
+  console.log(`website -- `, website);
 
   if (website.length === 0) {
     notFound();
