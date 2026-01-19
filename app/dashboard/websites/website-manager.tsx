@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -223,6 +224,11 @@ export default function WebsiteManager({
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                          <Link href={`/dashboard/analytics/${website.id}`}>
+                            View analytics
+                          </Link>
+                        </Button>
                         <Button
                           variant="outline"
                           onClick={() => {
