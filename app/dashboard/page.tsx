@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import CreateWebsiteDialog from "./create-website-dialog";
+import { createWebsite } from "./websites/actions";
 
 export default async function DashboardPage() {
   const user = await currentUser();
@@ -34,9 +36,7 @@ export default async function DashboardPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Button asChild>
-              <Link href="/dashboard/websites">Create new website</Link>
-            </Button>
+            <CreateWebsiteDialog createWebsite={createWebsite} />
             <Button variant="outline" asChild>
               <Link href="/dashboard/websites">Manage websites</Link>
             </Button>
