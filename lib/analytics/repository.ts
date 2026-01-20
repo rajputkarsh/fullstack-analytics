@@ -43,8 +43,9 @@ export async function upsertSession(session: SessionUpsert) {
     .values({
       id: session.id,
       websiteId: session.websiteId,
-      firstSeenAt: session.firstSeenAt,
-      lastSeenAt: session.lastSeenAt,
+      // Use DB time to avoid app/server clock skew affecting "active users".
+      firstSeenAt: sql`now()`,
+      lastSeenAt: sql`now()`,
       deviceType: session.deviceType,
       browser: session.browser,
       os: session.os,
@@ -53,7 +54,7 @@ export async function upsertSession(session: SessionUpsert) {
     .onConflictDoUpdate({
       target: sessionsTable.id,
       set: {
-        lastSeenAt: session.lastSeenAt,
+        lastSeenAt: sql`now()`,
         deviceType: sql`COALESCE(EXCLUDED.device_type, ${sessionsTable.deviceType})`,
         browser: sql`COALESCE(EXCLUDED.browser, ${sessionsTable.browser})`,
         os: sql`COALESCE(EXCLUDED.os, ${sessionsTable.os})`,

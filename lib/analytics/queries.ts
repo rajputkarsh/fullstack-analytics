@@ -79,6 +79,25 @@ function buildEventConditions(
   return conditions;
 }
 
+function buildActiveEventConditions(websiteId: string, filters: ActiveFilters) {
+  const conditions: SQL[] = [
+    sql`${eventsTable.websiteId} = ${websiteId}`,
+    sql`${eventsTable.eventType} = 'page_view'`,
+  ];
+
+  if (filters.deviceType) {
+    conditions.push(sql`${eventsTable.deviceType} = ${filters.deviceType}`);
+  }
+  if (filters.browser) {
+    conditions.push(sql`${eventsTable.browser} = ${filters.browser}`);
+  }
+  if (filters.country) {
+    conditions.push(sql`${eventsTable.country} = ${filters.country}`);
+  }
+
+  return conditions;
+}
+
 function buildSessionConditions(websiteId: string, filters: ActiveFilters) {
   const conditions: SQL[] = [sql`${sessionsTable.websiteId} = ${websiteId}`];
 
@@ -107,6 +126,7 @@ export const getOverviewMetrics = cache(
   ): Promise<OverviewMetrics> => {
     const whereSql = joinConditions(buildEventConditions(websiteId, filters));
     const sessionWhere = joinConditions(buildSessionConditions(websiteId, filters));
+    const activeEventWhere = joinConditions(buildActiveEventConditions(websiteId, filters));
     const activeInterval = sql.raw(`interval '${activeMinutes} minutes'`);
 
     const [overviewResult, activeResult] = await Promise.all([
@@ -119,10 +139,21 @@ export const getOverviewMetrics = cache(
         WHERE ${whereSql};
       `),
       db.execute(sql`
-        SELECT COUNT(DISTINCT ${sessionsTable.id})::int AS active_users
-        FROM ${sessionsTable}
-        WHERE ${sessionWhere}
-          AND ${sessionsTable.lastSeenAt} >= (now() - ${activeInterval});
+        WITH session_active AS (
+          SELECT COUNT(DISTINCT ${sessionsTable.id})::int AS total
+          FROM ${sessionsTable}
+          WHERE ${sessionWhere}
+            AND ${sessionsTable.lastSeenAt} >= (now() - ${activeInterval})
+        ),
+        event_active AS (
+          SELECT COUNT(DISTINCT ${eventsTable.sessionId})::int AS total
+          FROM ${eventsTable}
+          WHERE ${activeEventWhere}
+            AND ${eventsTable.createdAt} >= (now() - ${activeInterval})
+        )
+        SELECT COALESCE(NULLIF(session_active.total, 0), event_active.total, 0) AS active_users
+        FROM session_active
+        CROSS JOIN event_active;
       `),
     ]);
 
@@ -240,13 +271,25 @@ export async function getActiveUsers(
   activeMinutes: number,
 ) {
   const whereSql = joinConditions(buildSessionConditions(websiteId, filters));
+  const eventWhereSql = joinConditions(buildActiveEventConditions(websiteId, filters));
   const activeInterval = sql.raw(`interval '${activeMinutes} minutes'`);
 
   const result = await db.execute(sql`
-    SELECT COUNT(DISTINCT ${sessionsTable.id})::int AS active_users
-    FROM ${sessionsTable}
-    WHERE ${whereSql}
-      AND ${sessionsTable.lastSeenAt} >= (now() - ${activeInterval});
+    WITH session_active AS (
+      SELECT COUNT(DISTINCT ${sessionsTable.id})::int AS total
+      FROM ${sessionsTable}
+      WHERE ${whereSql}
+        AND ${sessionsTable.lastSeenAt} >= (now() - ${activeInterval})
+    ),
+    event_active AS (
+      SELECT COUNT(DISTINCT ${eventsTable.sessionId})::int AS total
+      FROM ${eventsTable}
+      WHERE ${eventWhereSql}
+        AND ${eventsTable.createdAt} >= (now() - ${activeInterval})
+    )
+    SELECT COALESCE(NULLIF(session_active.total, 0), event_active.total, 0) AS active_users
+    FROM session_active
+    CROSS JOIN event_active;
   `);
 
   return toNumber(result.rows?.[0]?.active_users);
