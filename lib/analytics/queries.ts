@@ -151,7 +151,10 @@ export const getOverviewMetrics = cache(
           WHERE ${activeEventWhere}
             AND ${eventsTable.createdAt} >= (now() - ${activeInterval})
         )
-        SELECT COALESCE(NULLIF(session_active.total, 0), event_active.total, 0) AS active_users
+        SELECT GREATEST(
+          COALESCE(session_active.total, 0),
+          COALESCE(event_active.total, 0)
+        ) AS active_users
         FROM session_active
         CROSS JOIN event_active;
       `),
@@ -287,7 +290,10 @@ export async function getActiveUsers(
       WHERE ${eventWhereSql}
         AND ${eventsTable.createdAt} >= (now() - ${activeInterval})
     )
-    SELECT COALESCE(NULLIF(session_active.total, 0), event_active.total, 0) AS active_users
+    SELECT GREATEST(
+      COALESCE(session_active.total, 0),
+      COALESCE(event_active.total, 0)
+    ) AS active_users
     FROM session_active
     CROSS JOIN event_active;
   `);
