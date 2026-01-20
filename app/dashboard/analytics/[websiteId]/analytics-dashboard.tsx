@@ -143,10 +143,13 @@ export default function AnalyticsDashboard({
 
   const hasSeriesData = useMemo(
     () =>
-      timeSeries.some(
-        (point) => point.pageViews > 0 || point.visitors > 0 || point.sessions > 0,
-      ),
-    [timeSeries],
+      chartData.some((point) => {
+        const pageViews = Number(point.pageViews) || 0;
+        const visitors = Number(point.visitors) || 0;
+        const sessions = Number(point.sessions) || 0;
+        return pageViews > 0 || visitors > 0 || sessions > 0;
+      }),
+    [chartData],
   );
 
   const updateFilters = (updates: Partial<DashboardFilters> & { granularity?: string }) => {
@@ -185,7 +188,6 @@ export default function AnalyticsDashboard({
                 {website.name} · {website.domain}
               </p>
             </div>
-            <Badge variant="secondary">Protected</Badge>
           </div>
         </div>
       </header>
@@ -370,21 +372,24 @@ export default function AnalyticsDashboard({
                       dataKey="pageViews"
                       stroke="var(--color-pageViews)"
                       strokeWidth={2}
-                      dot={false}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="visitors"
                       stroke="var(--color-visitors)"
                       strokeWidth={2}
-                      dot={false}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="sessions"
                       stroke="var(--color-sessions)"
                       strokeWidth={2}
-                      dot={false}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
                     />
                   </LineChart>
                 )}
