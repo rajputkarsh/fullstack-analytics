@@ -2,6 +2,7 @@
 
 import { useMemo, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -179,7 +180,7 @@ export default function AnalyticsDashboard({
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       <header className="bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Analytics
@@ -187,6 +188,14 @@ export default function AnalyticsDashboard({
               <p className="text-sm text-muted-foreground">
                 {website.name} · {website.domain}
               </p>
+            </div>
+            <div className="ml-auto">
+              <Link
+                href="/dashboard/websites"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                ← Back to websites
+              </Link>
             </div>
           </div>
         </div>
