@@ -16,7 +16,9 @@ type PageProps = {
   params:
     | { websiteId: string }
     | Promise<{ websiteId: string }>;
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?:
+    | Record<string, string | string[] | undefined>
+    | Promise<Record<string, string | string[] | undefined>>;
 };
 
 const DEFAULT_RANGE_DAYS = 30;
@@ -128,6 +130,7 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
 
   const resolvedParams = await params;
   const websiteId = resolvedParams.websiteId;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const website = await db
     .select({
       id: websitesTable.id,
@@ -139,21 +142,19 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
     .where(and(eq(websitesTable.id, websiteId), eq(websitesTable.userId, user.id)))
     .limit(1);
 
-  console.log(`website -- `, website);
-
   if (website.length === 0) {
     notFound();
   }
 
-  const range = normalizeRange(searchParams?.from, searchParams?.to);
+  const range = normalizeRange(resolvedSearchParams?.from, resolvedSearchParams?.to);
   const filters: AnalyticsFilters = {
     from: range.from,
     to: range.to,
-    deviceType: normalizeDevice(searchParams?.device),
-    browser: normalizeBrowser(searchParams?.browser),
-    country: normalizeCountry(searchParams?.country),
+    deviceType: normalizeDevice(resolvedSearchParams?.device),
+    browser: normalizeBrowser(resolvedSearchParams?.browser),
+    country: normalizeCountry(resolvedSearchParams?.country),
   };
-  const granularity = normalizeGranularity(searchParams?.granularity);
+  const granularity = normalizeGranularity(resolvedSearchParams?.granularity);
 
   const [overview, timeSeries, filterOptions] = await Promise.all([
     getOverviewMetrics(website[0].id, filters, ACTIVE_MINUTES),
