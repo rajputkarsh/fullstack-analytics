@@ -82,6 +82,26 @@ function toSafeCountry(value: unknown) {
   return trimmed;
 }
 
+function resolveCountry(request: NextRequest) {
+  const headerCountry =
+    toSafeCountry(request.headers.get("x-vercel-ip-country")) ||
+    toSafeCountry(request.headers.get("cf-ipcountry")) ||
+    toSafeCountry(request.headers.get("x-country")) ||
+    toSafeCountry(request.headers.get("x-geo-country"));
+
+  if (headerCountry) return headerCountry;
+
+  if (process.env.NODE_ENV === "development") {
+    return (
+      toSafeCountry(process.env.TRACKING_DEV_COUNTRY) ||
+      toSafeCountry(request.headers.get("x-dev-country")) ||
+      undefined
+    );
+  }
+
+  return undefined;
+}
+
 function normalizeDeviceType(value: unknown) {
   if (value === "mobile" || value === "tablet" || value === "desktop") {
     return value;
@@ -167,7 +187,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const country = toSafeCountry(request.geo?.country);
+    const country = resolveCountry(request);
     const events: EventInsert[] = [];
     const sessions = new Map<string, SessionUpsert>();
 
