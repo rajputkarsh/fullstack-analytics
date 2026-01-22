@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { UserButton } from "@clerk/nextjs";
 import type { ActionResult } from "./actions";
 
 type Website = {
@@ -72,15 +73,12 @@ export default function WebsiteManager({
     return new Map(
       websites.map((website) => [
         website.id,
-        `<script>
-  (function () {
-    fetch("${baseUrl}/api/track", {
-      method: "POST",
-      body: JSON.stringify({ trackingId: "${website.trackingId}", url: window.location.href }),
-      headers: { "Content-Type": "application/json" }
-    });
-  })();
-</script>`,
+        `<script
+  src="${baseUrl}/tracker.js"
+  data-tracking-id="${website.trackingId}"
+  data-endpoint="${baseUrl}/api/track"
+  async
+></script>`,
       ]),
     );
   }, [baseUrl, websites]);
@@ -143,7 +141,7 @@ export default function WebsiteManager({
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       <header className="bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Websites
@@ -152,38 +150,41 @@ export default function WebsiteManager({
                 Manage websites and tracking scripts.
               </p>
             </div>
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button>Add website</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add website</DialogTitle>
-                  <DialogDescription>
-                    Provide a name and domain to generate a tracking script.
-                  </DialogDescription>
-                </DialogHeader>
-                <form ref={createFormRef} action={handleCreate} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Website name
-                    </label>
-                    <Input name="name" placeholder="Marketing site" required />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Domain
-                    </label>
-                    <Input name="domain" placeholder="example.com" required />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" disabled={isPending}>
-                      {isPending ? <Spinner /> : "Create website"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <div className="ml-auto flex items-center gap-3">
+              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button>Add website</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add website</DialogTitle>
+                    <DialogDescription>
+                      Provide a name and domain to generate a tracking script.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form ref={createFormRef} action={handleCreate} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Website name
+                      </label>
+                      <Input name="name" placeholder="Marketing site" required />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Domain
+                      </label>
+                      <Input name="domain" placeholder="example.com" required />
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isPending}>
+                        {isPending ? <Spinner /> : "Create website"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <UserButton />
+            </div>
           </div>
         </div>
       </header>
