@@ -17,11 +17,9 @@ export function useRole(): UserRole | null {
       return null;
     }
 
-    // Check publicMetadata first, then privateMetadata
-    const role = (user.publicMetadata?.role as UserRole) || 
-                 (user.privateMetadata?.role as UserRole) || 
-                 'user';
-    
+    // Check publicMetadata for role (privateMetadata is not accessible on client-side)
+    const role = (user.publicMetadata?.role as UserRole) || 'user';
+
     return role;
   }, [user]);
 }
