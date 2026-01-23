@@ -69,32 +69,88 @@ const chartConfig: ChartConfig = {
   value: { label: "Value", color: "#3b82f6" },
 };
 
-// Vibrant color palette for charts
-const COLORS = [
+// Device Types - Cool blues and teals
+const DEVICE_COLORS = [
   "#3b82f6", // Blue
-  "#10b981", // Green
-  "#8b5cf6", // Purple
-  "#f59e0b", // Amber
-  "#ef4444", // Red
   "#06b6d4", // Cyan
-  "#ec4899", // Pink
-  "#84cc16", // Lime
+  "#14b8a6", // Teal
+  "#0ea5e9", // Sky Blue
   "#6366f1", // Indigo
-  "#f97316", // Orange
+  "#8b5cf6", // Purple
+  "#a855f7", // Purple-500
+  "#d946ef", // Fuchsia
 ];
 
-// Color palette for bar charts (gradient from blue to purple)
-const BAR_COLORS = [
-  "#3b82f6", // Blue
-  "#2563eb", // Blue-600
-  "#1d4ed8", // Blue-700
-  "#8b5cf6", // Purple
-  "#7c3aed", // Purple-600
-  "#6d28d9", // Purple-700
+// Top Browsers - Warm oranges and reds
+const BROWSER_COLORS = [
+  "#f97316", // Orange
+  "#ef4444", // Red
+  "#dc2626", // Red-600
+  "#f59e0b", // Amber
+  "#eab308", // Yellow
+  "#fbbf24", // Amber-400
+  "#fb923c", // Orange-400
+  "#fa8b5c", // Orange-500
+  "#f87171", // Red-400
+  "#fca5a5", // Red-300
+];
+
+// Top Countries - Greens and emeralds
+const COUNTRY_COLORS = [
   "#10b981", // Green
   "#059669", // Green-600
   "#047857", // Green-700
+  "#34d399", // Green-400
+  "#6ee7b7", // Green-300
+  "#84cc16", // Lime
+  "#65a30d", // Lime-600
+  "#4ade80", // Green-400
+  "#22c55e", // Green-500
+  "#16a34a", // Green-600
+];
+
+// Operating Systems - Purples and pinks
+const OS_COLORS = [
+  "#8b5cf6", // Purple
+  "#7c3aed", // Purple-600
+  "#6d28d9", // Purple-700
+  "#a855f7", // Purple-500
+  "#c084fc", // Purple-400
+  "#d946ef", // Fuchsia
+  "#ec4899", // Pink
+  "#f472b6", // Pink-400
+  "#9333ea", // Purple-700
+  "#a21caf", // Fuchsia-700
+];
+
+// Top Pages - Blues and cyans
+const PAGES_COLORS = [
+  "#3b82f6", // Blue
+  "#2563eb", // Blue-600
+  "#1d4ed8", // Blue-700
+  "#0ea5e9", // Sky Blue
+  "#06b6d4", // Cyan
+  "#0891b2", // Cyan-600
+  "#0284c7", // Sky Blue-600
+  "#0369a1", // Sky Blue-700
+  "#075985", // Sky Blue-800
+  "#0c4a6e", // Sky Blue-900
+];
+
+// Traffic Sources - Mixed vibrant colors
+const REFERRER_COLORS = [
+  "#ec4899", // Pink
   "#f59e0b", // Amber
+  "#10b981", // Green
+  "#3b82f6", // Blue
+  "#8b5cf6", // Purple
+  "#ef4444", // Red
+  "#06b6d4", // Cyan
+  "#f97316", // Orange
+  "#84cc16", // Lime
+  "#6366f1", // Indigo
+  "#d946ef", // Fuchsia
+  "#14b8a6", // Teal
 ];
 
 const deviceOptions: Array<{ value: DashboardFilters["deviceType"]; label: string }> = [
@@ -474,7 +530,7 @@ export default function AnalyticsDashboard({
                       label={({ label, percent }) => `${label} ${(percent * 100).toFixed(0)}%`}
                     >
                       {deviceTypeBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={DEVICE_COLORS[index % DEVICE_COLORS.length]} />
                       ))}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
@@ -505,7 +561,7 @@ export default function AnalyticsDashboard({
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={4}>
                       {browserBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={BROWSER_COLORS[index % BROWSER_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -535,7 +591,7 @@ export default function AnalyticsDashboard({
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={4}>
                       {countryBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={COUNTRY_COLORS[index % COUNTRY_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -565,7 +621,7 @@ export default function AnalyticsDashboard({
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={4}>
                       {osBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={OS_COLORS[index % OS_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -595,7 +651,7 @@ export default function AnalyticsDashboard({
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={4}>
                       {topPages.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={PAGES_COLORS[index % PAGES_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -629,7 +685,7 @@ export default function AnalyticsDashboard({
                       label={({ label, percent }) => `${label} ${(percent * 100).toFixed(0)}%`}
                     >
                       {referrerBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={REFERRER_COLORS[index % REFERRER_COLORS.length]} />
                       ))}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
