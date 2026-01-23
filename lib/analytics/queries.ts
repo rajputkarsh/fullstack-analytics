@@ -301,3 +301,130 @@ export async function getActiveUsers(
   return toNumber(result.rows?.[0]?.active_users);
 }
 
+function buildMultiWebsiteEventConditions(
+  websiteIds: string[],
+  filters: AnalyticsFilters,
+) {
+  if (websiteIds.length === 0) {
+    // Return a condition that will never match
+    return [sql`1 = 0`];
+  }
+
+  const websiteIdConditions = websiteIds.map((id) => sql`${eventsTable.websiteId} = ${id}`);
+  const websiteIdCondition = sql`(${sql.join(websiteIdConditions, sql` OR `)})`;
+  
+  const conditions: SQL[] = [
+    websiteIdCondition,
+    sql`${eventsTable.eventType} = 'page_view'`,
+    sql`${eventsTable.createdAt} >= ${filters.from}`,
+    sql`${eventsTable.createdAt} <= ${filters.to}`,
+  ];
+
+  if (filters.deviceType) {
+    conditions.push(sql`${eventsTable.deviceType} = ${filters.deviceType}`);
+  }
+  if (filters.browser) {
+    conditions.push(sql`${eventsTable.browser} = ${filters.browser}`);
+  }
+  if (filters.country) {
+    conditions.push(sql`${eventsTable.country} = ${filters.country}`);
+  }
+
+  return conditions;
+}
+
+function buildMultiWebsiteSessionConditions(
+  websiteIds: string[],
+  filters: ActiveFilters,
+) {
+  if (websiteIds.length === 0) {
+    // Return a condition that will never match
+    return [sql`1 = 0`];
+  }
+
+  const websiteIdConditions = websiteIds.map((id) => sql`${sessionsTable.websiteId} = ${id}`);
+  const websiteIdCondition = sql`(${sql.join(websiteIdConditions, sql` OR `)})`;
+  const conditions: SQL[] = [websiteIdCondition];
+
+  if (filters.deviceType) {
+    conditions.push(sql`${sessionsTable.deviceType} = ${filters.deviceType}`);
+  }
+  if (filters.browser) {
+    conditions.push(sql`${sessionsTable.browser} = ${filters.browser}`);
+  }
+  if (filters.country) {
+    conditions.push(sql`${sessionsTable.country} = ${filters.country}`);
+  }
+
+  return conditions;
+}
+
+export const getAggregateOverviewMetrics = cache(
+  async (
+    websiteIds: string[],
+    filters: AnalyticsFilters,
+    activeMinutes: number,
+  ): Promise<OverviewMetrics> => {
+    if (websiteIds.length === 0) {
+      return {
+        pageViews: 0,
+        sessions: 0,
+        visitors: 0,
+        activeUsers: 0,
+      };
+    }
+
+    const whereSql = joinConditions(buildMultiWebsiteEventConditions(websiteIds, filters));
+    const sessionWhere = joinConditions(buildMultiWebsiteSessionConditions(websiteIds, filters));
+    const activeEventWhere = joinConditions(
+      buildMultiWebsiteEventConditions(websiteIds, {
+        ...filters,
+        from: new Date(Date.now() - activeMinutes * 60 * 1000),
+        to: new Date(),
+      }),
+    );
+    const activeInterval = sql.raw(`interval '${activeMinutes} minutes'`);
+
+    const [overviewResult, activeResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          COUNT(*)::int AS page_views,
+          COUNT(DISTINCT ${eventsTable.sessionId})::int AS sessions,
+          COUNT(DISTINCT ${eventsTable.sessionId})::int AS visitors
+        FROM ${eventsTable}
+        WHERE ${whereSql};
+      `),
+      db.execute(sql`
+        WITH session_active AS (
+          SELECT COUNT(DISTINCT ${sessionsTable.id})::int AS total
+          FROM ${sessionsTable}
+          WHERE ${sessionWhere}
+            AND ${sessionsTable.lastSeenAt} >= (now() - ${activeInterval})
+        ),
+        event_active AS (
+          SELECT COUNT(DISTINCT ${eventsTable.sessionId})::int AS total
+          FROM ${eventsTable}
+          WHERE ${activeEventWhere}
+            AND ${eventsTable.createdAt} >= (now() - ${activeInterval})
+        )
+        SELECT GREATEST(
+          COALESCE(session_active.total, 0),
+          COALESCE(event_active.total, 0)
+        ) AS active_users
+        FROM session_active
+        CROSS JOIN event_active;
+      `),
+    ]);
+
+    const overviewRow = overviewResult.rows?.[0] ?? {};
+    const activeRow = activeResult.rows?.[0] ?? {};
+
+    return {
+      pageViews: toNumber(overviewRow.page_views),
+      sessions: toNumber(overviewRow.sessions),
+      visitors: toNumber(overviewRow.visitors),
+      activeUsers: toNumber(activeRow.active_users),
+    };
+  },
+);
+
