@@ -39,6 +39,13 @@ export type FilterOptions = {
   countries: string[];
 };
 
+export type BreakdownItem = {
+  label: string;
+  value: number;
+};
+
+export type BreakdownData = BreakdownItem[];
+
 function toNumber(value: unknown) {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value) return Number(value);
@@ -425,6 +432,150 @@ export const getAggregateOverviewMetrics = cache(
       visitors: toNumber(overviewRow.visitors),
       activeUsers: toNumber(activeRow.active_users),
     };
+  },
+);
+
+export const getDeviceTypeBreakdown = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters, ["browser", "country"]));
+
+    const result = await db.execute(sql`
+      SELECT 
+        ${eventsTable.deviceType} AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+        AND ${eventsTable.deviceType} IS NOT NULL
+      GROUP BY ${eventsTable.deviceType}
+      ORDER BY value DESC;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "Unknown"),
+      value: toNumber(row.value),
+    }));
+  },
+);
+
+export const getBrowserBreakdown = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters, ["country"]));
+
+    const result = await db.execute(sql`
+      SELECT 
+        ${eventsTable.browser} AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+        AND ${eventsTable.browser} IS NOT NULL
+      GROUP BY ${eventsTable.browser}
+      ORDER BY value DESC
+      LIMIT 10;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "Unknown"),
+      value: toNumber(row.value),
+    }));
+  },
+);
+
+export const getCountryBreakdown = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters, ["browser"]));
+
+    const result = await db.execute(sql`
+      SELECT 
+        COALESCE(${eventsTable.country}, 'Unknown') AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+      GROUP BY ${eventsTable.country}
+      ORDER BY value DESC
+      LIMIT 10;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "Unknown"),
+      value: toNumber(row.value),
+    }));
+  },
+);
+
+export const getTopPages = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters));
+
+    const result = await db.execute(sql`
+      SELECT 
+        COALESCE(${eventsTable.pagePath}, '/') AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+        AND ${eventsTable.pagePath} IS NOT NULL
+      GROUP BY ${eventsTable.pagePath}
+      ORDER BY value DESC
+      LIMIT 10;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "/"),
+      value: toNumber(row.value),
+    }));
+  },
+);
+
+export const getOSBreakdown = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters));
+
+    const result = await db.execute(sql`
+      SELECT 
+        ${eventsTable.os} AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+        AND ${eventsTable.os} IS NOT NULL
+      GROUP BY ${eventsTable.os}
+      ORDER BY value DESC
+      LIMIT 10;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "Unknown"),
+      value: toNumber(row.value),
+    }));
+  },
+);
+
+export const getReferrerBreakdown = cache(
+  async (websiteId: string, filters: AnalyticsFilters): Promise<BreakdownData> => {
+    const whereSql = joinConditions(buildEventConditions(websiteId, filters));
+
+    const result = await db.execute(sql`
+      SELECT 
+        CASE 
+          WHEN ${eventsTable.referrer} IS NULL OR ${eventsTable.referrer} = '' THEN 'Direct'
+          WHEN ${eventsTable.referrer} LIKE '%google%' THEN 'Google'
+          WHEN ${eventsTable.referrer} LIKE '%bing%' THEN 'Bing'
+          WHEN ${eventsTable.referrer} LIKE '%yahoo%' THEN 'Yahoo'
+          WHEN ${eventsTable.referrer} LIKE '%facebook%' THEN 'Facebook'
+          WHEN ${eventsTable.referrer} LIKE '%twitter%' OR ${eventsTable.referrer} LIKE '%x.com%' THEN 'Twitter/X'
+          WHEN ${eventsTable.referrer} LIKE '%linkedin%' THEN 'LinkedIn'
+          WHEN ${eventsTable.referrer} LIKE '%reddit%' THEN 'Reddit'
+          ELSE 'Other'
+        END AS label,
+        COUNT(*)::int AS value
+      FROM ${eventsTable}
+      WHERE ${whereSql}
+      GROUP BY label
+      ORDER BY value DESC;
+    `);
+
+    return (result.rows ?? []).map((row) => ({
+      label: String(row.label || "Unknown"),
+      value: toNumber(row.value),
+    }));
   },
 );
 

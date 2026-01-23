@@ -29,9 +29,9 @@ import {
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import RealTimeActiveUsers from "./real-time-active";
-import type { AnalyticsGranularity, TimeSeriesPoint, OverviewMetrics } from "./queries";
+import type { AnalyticsGranularity, TimeSeriesPoint, OverviewMetrics, BreakdownData } from "./queries";
 
 type DashboardFilters = {
   from: string;
@@ -54,13 +54,48 @@ type AnalyticsDashboardProps = {
   filters: DashboardFilters;
   filterOptions: FilterOptions;
   activeMinutes: number;
+  deviceTypeBreakdown: BreakdownData;
+  browserBreakdown: BreakdownData;
+  countryBreakdown: BreakdownData;
+  topPages: BreakdownData;
+  osBreakdown: BreakdownData;
+  referrerBreakdown: BreakdownData;
 };
 
 const chartConfig: ChartConfig = {
-  pageViews: { label: "Page views", color: "hsl(var(--chart-1))" },
-  visitors: { label: "Visitors", color: "hsl(var(--chart-2))" },
-  sessions: { label: "Sessions", color: "hsl(var(--chart-3))" },
+  pageViews: { label: "Page views", color: "#3b82f6" },
+  visitors: { label: "Visitors", color: "#10b981" },
+  sessions: { label: "Sessions", color: "#8b5cf6" },
+  value: { label: "Value", color: "#3b82f6" },
 };
+
+// Vibrant color palette for charts
+const COLORS = [
+  "#3b82f6", // Blue
+  "#10b981", // Green
+  "#8b5cf6", // Purple
+  "#f59e0b", // Amber
+  "#ef4444", // Red
+  "#06b6d4", // Cyan
+  "#ec4899", // Pink
+  "#84cc16", // Lime
+  "#6366f1", // Indigo
+  "#f97316", // Orange
+];
+
+// Color palette for bar charts (gradient from blue to purple)
+const BAR_COLORS = [
+  "#3b82f6", // Blue
+  "#2563eb", // Blue-600
+  "#1d4ed8", // Blue-700
+  "#8b5cf6", // Purple
+  "#7c3aed", // Purple-600
+  "#6d28d9", // Purple-700
+  "#10b981", // Green
+  "#059669", // Green-600
+  "#047857", // Green-700
+  "#f59e0b", // Amber
+];
 
 const deviceOptions: Array<{ value: DashboardFilters["deviceType"]; label: string }> = [
   { value: undefined, label: "All devices" },
@@ -126,6 +161,12 @@ export default function AnalyticsDashboard({
   filters,
   filterOptions,
   activeMinutes,
+  deviceTypeBreakdown,
+  browserBreakdown,
+  countryBreakdown,
+  topPages,
+  osBreakdown,
+  referrerBreakdown,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -365,9 +406,9 @@ export default function AnalyticsDashboard({
                     <YAxis tickLine={false} axisLine={false} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="pageViews" fill="var(--color-pageViews)" radius={4} />
-                    <Bar dataKey="visitors" fill="var(--color-visitors)" radius={4} />
-                    <Bar dataKey="sessions" fill="var(--color-sessions)" radius={4} />
+                    <Bar dataKey="pageViews" fill="#3b82f6" radius={4} />
+                    <Bar dataKey="visitors" fill="#10b981" radius={4} />
+                    <Bar dataKey="sessions" fill="#8b5cf6" radius={4} />
                   </BarChart>
                 ) : (
                   <LineChart data={chartData} margin={{ left: 12, right: 12 }}>
@@ -379,7 +420,7 @@ export default function AnalyticsDashboard({
                     <Line
                       type="monotone"
                       dataKey="pageViews"
-                      stroke="var(--color-pageViews)"
+                      stroke="#3b82f6"
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       activeDot={{ r: 4 }}
@@ -387,7 +428,7 @@ export default function AnalyticsDashboard({
                     <Line
                       type="monotone"
                       dataKey="visitors"
-                      stroke="var(--color-visitors)"
+                      stroke="#10b981"
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       activeDot={{ r: 4 }}
@@ -395,7 +436,7 @@ export default function AnalyticsDashboard({
                     <Line
                       type="monotone"
                       dataKey="sessions"
-                      stroke="var(--color-sessions)"
+                      stroke="#8b5cf6"
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       activeDot={{ r: 4 }}
@@ -406,6 +447,198 @@ export default function AnalyticsDashboard({
             )}
           </CardContent>
         </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Device Types</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {deviceTypeBreakdown.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No device type data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <PieChart>
+                    <Pie
+                      data={deviceTypeBreakdown}
+                      dataKey="value"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ label, percent }) => `${label} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {deviceTypeBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Browsers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {browserBreakdown.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No browser data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <BarChart data={browserBreakdown} layout="vertical" margin={{ left: 12, right: 12 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickLine={false} axisLine={false} />
+                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} width={100} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" radius={4}>
+                      {browserBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Countries</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {countryBreakdown.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No country data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <BarChart data={countryBreakdown} layout="vertical" margin={{ left: 12, right: 12 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickLine={false} axisLine={false} />
+                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} width={60} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" radius={4}>
+                      {countryBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Operating Systems</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {osBreakdown.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No OS data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <BarChart data={osBreakdown} layout="vertical" margin={{ left: 12, right: 12 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickLine={false} axisLine={false} />
+                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} width={100} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" radius={4}>
+                      {osBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Pages</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topPages.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No page data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <BarChart data={topPages} layout="vertical" margin={{ left: 12, right: 12 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickLine={false} axisLine={false} />
+                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} width={150} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" radius={4}>
+                      {topPages.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic Sources</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {referrerBreakdown.length === 0 ? (
+                <Empty className="border-dashed">
+                  <EmptyHeader>
+                    <EmptyTitle>No data</EmptyTitle>
+                    <EmptyDescription>No referrer data available</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <PieChart>
+                    <Pie
+                      data={referrerBreakdown}
+                      dataKey="value"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ label, percent }) => `${label} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {referrerBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );

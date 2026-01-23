@@ -8,6 +8,12 @@ import {
   getFilterOptions,
   getOverviewMetrics,
   getTimeSeries,
+  getDeviceTypeBreakdown,
+  getBrowserBreakdown,
+  getCountryBreakdown,
+  getTopPages,
+  getOSBreakdown,
+  getReferrerBreakdown,
   type AnalyticsFilters,
   type AnalyticsGranularity,
 } from "./queries";
@@ -156,10 +162,26 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
   };
   const granularity = normalizeGranularity(resolvedSearchParams?.granularity);
 
-  const [overview, timeSeries, filterOptions] = await Promise.all([
+  const [
+    overview,
+    timeSeries,
+    filterOptions,
+    deviceTypeBreakdown,
+    browserBreakdown,
+    countryBreakdown,
+    topPages,
+    osBreakdown,
+    referrerBreakdown,
+  ] = await Promise.all([
     getOverviewMetrics(website[0].id, filters, ACTIVE_MINUTES),
     getTimeSeries(website[0].id, filters, granularity),
     getFilterOptions(website[0].id, filters),
+    getDeviceTypeBreakdown(website[0].id, filters),
+    getBrowserBreakdown(website[0].id, filters),
+    getCountryBreakdown(website[0].id, filters),
+    getTopPages(website[0].id, filters),
+    getOSBreakdown(website[0].id, filters),
+    getReferrerBreakdown(website[0].id, filters),
   ]);
 
   return (
@@ -177,6 +199,12 @@ export default async function AnalyticsPage({ params, searchParams }: PageProps)
       }}
       filterOptions={filterOptions}
       activeMinutes={ACTIVE_MINUTES}
+      deviceTypeBreakdown={deviceTypeBreakdown}
+      browserBreakdown={browserBreakdown}
+      countryBreakdown={countryBreakdown}
+      topPages={topPages}
+      osBreakdown={osBreakdown}
+      referrerBreakdown={referrerBreakdown}
     />
   );
 }
