@@ -152,6 +152,12 @@ export default function WebsiteManager({
               </p>
             </div>
             <div className="ml-auto flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                ← Back to dashboard
+              </Link>              
               <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                 <DialogTrigger asChild>
                   <Button>Add website</Button>
