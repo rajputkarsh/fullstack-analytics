@@ -14,6 +14,7 @@ export type ActionResult = {
 
 const DOMAIN_REGEX =
   /^(?=.{1,253}$)(?!-)([a-z0-9-]{1,63}\.)+[a-z]{2,}$/i;
+const LOCALHOST_IP_REGEX = /^(127\.0\.0\.1|0\.0\.0\.0)$/;
 
 function normalizeDomain(input: string): string | null {
   const trimmed = input.trim().toLowerCase();
@@ -30,7 +31,9 @@ function normalizeDomain(input: string): string | null {
     const hostname = parsed.hostname.toLowerCase();
     const host = parsed.host.toLowerCase();
     const isLocalhost =
-      hostname === "localhost" || hostname.endsWith(".localhost");
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      LOCALHOST_IP_REGEX.test(hostname);
 
     if (!isLocalhost && !DOMAIN_REGEX.test(hostname)) {
       return null;
