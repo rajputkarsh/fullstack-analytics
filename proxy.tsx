@@ -43,7 +43,7 @@ export default clerkMiddleware(async (auth, req) => {
         const publicMetadata = sessionClaims?.publicMetadata as { role?: string } | undefined;
         const privateMetadata = sessionClaims?.privateMetadata as { role?: string } | undefined;
         const role = publicMetadata?.role || privateMetadata?.role || 'user';
-        
+
         if (role !== 'admin') {
             // Redirect non-admin users to dashboard
             const dashboardUrl = new URL('/dashboard', req.url)
