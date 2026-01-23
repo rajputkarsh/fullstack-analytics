@@ -1,6 +1,6 @@
 "use client"
 
-import { useUser } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import React, { useEffect, useRef } from 'react'
 
@@ -12,6 +12,7 @@ function Provider({
 }>) {
 
     const { user, isLoaded, isSignedIn } = useUser();
+    const { getToken } = useAuth();
     const didCreate = useRef(false);
 
     useEffect(() => {
@@ -22,15 +23,15 @@ function Provider({
 
     const createNewUser = async () => {
         try {
-            const token = await user?.getToken();
+            const token = await getToken();
             await axios.post(
                 '/api/user',
                 undefined,
                 token
                     ? {
-                          headers: { Authorization: `Bearer ${token}` },
-                          withCredentials: true,
-                      }
+                        headers: { Authorization: `Bearer ${token}` },
+                        withCredentials: true,
+                    }
                     : { withCredentials: true },
             );
         } catch {
